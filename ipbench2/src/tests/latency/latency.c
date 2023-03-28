@@ -16,34 +16,34 @@
 
 struct layer_opts *layer;
 struct layer_opts tcp_layer =
-{
-	.setup_socket = tcp_setup_socket,
-	.setup_packet = ip_setup_packet,
-	.fill_packet = ip_fill_packet,
-	.read_packet = ip_read_packet,
-	.send_packet = ip_send_packet,
-	.recv_packet = ip_recv_packet,
+	{
+		.setup_socket = tcp_setup_socket,
+		.setup_packet = ip_setup_packet,
+		.fill_packet = ip_fill_packet,
+		.read_packet = ip_read_packet,
+		.send_packet = ip_send_packet,
+		.recv_packet = ip_recv_packet,
 };
 
 struct layer_opts udp_layer =
-{
-	.setup_socket = udp_setup_socket,
-	.setup_packet = ip_setup_packet,
-	.fill_packet = ip_fill_packet,
-	.read_packet = ip_read_packet,
-	.send_packet = ip_send_packet,
-	.recv_packet = ip_recv_packet,
+	{
+		.setup_socket = udp_setup_socket,
+		.setup_packet = ip_setup_packet,
+		.fill_packet = ip_fill_packet,
+		.read_packet = ip_read_packet,
+		.send_packet = ip_send_packet,
+		.recv_packet = ip_recv_packet,
 };
 
 #ifdef CONFIG_RAW_LINUX
 struct layer_opts raw_layer =
-{
-	.setup_socket = raw_setup_socket,
-	.setup_packet = raw_setup_packet,
-	.fill_packet = raw_fill_packet,
-	.read_packet = raw_read_packet,
-	.send_packet = raw_send_packet,
-	.recv_packet = raw_recv_packet,
+	{
+		.setup_socket = raw_setup_socket,
+		.setup_packet = raw_setup_packet,
+		.fill_packet = raw_fill_packet,
+		.read_packet = raw_read_packet,
+		.send_packet = raw_send_packet,
+		.recv_packet = raw_recv_packet,
 };
 #endif
 
@@ -51,22 +51,18 @@ static struct latency_result result;
 
 /* Globals and their defaults */
 static int fd;
-static uint64_t samples = SAMPLES;      /* Samples required. A sample is one 
-					 * packet that has made a round trip
-					 */
-static uint64_t bps=10000000;		/* Throughput to attempt            */
-static uint64_t size=64;		/* Size of chunks to send           */
-static uint64_t warmup=10*US_PER_S;	/* Warmup for 10 seconds 	    */
-static uint64_t cooldown=10*US_PER_S;   /* Cooldown for 10 seconds 	    */
-static uint64_t drop_threshold=1;       /* Threshold before dropping a packet with UDP */
-static uint64_t socktype=SOCKTYPE_TCP;  /* By default use TCP               */
+static uint64_t samples = SAMPLES;		  /* Samples required. A sample is one
+										   * packet that has made a round trip
+										   */
+static uint64_t bps = 10000000;			  /* Throughput to attempt */
+static uint64_t size = 64;				  /* Size of chunks to send */
+static uint64_t warmup = 10 * US_PER_S;	  /* Warmup for 10 seconds */
+static uint64_t cooldown = 10 * US_PER_S; /* Cooldown for 10 seconds */
+static uint64_t drop_threshold = 1;		  /* Threshold before dropping a packet with UDP */
+static uint64_t socktype = SOCKTYPE_TCP;  /* By default use TCP */
 
-static uint64_t *rtt_client_sample;     /* an array of size 'samples' to 
-					 *  hold our results 
-					 */
-static uint64_t *rtt_sample;            /* ptr to current sample in
-					 * rtt_client_sample
-					 */
+static uint64_t *rtt_client_sample; /* an array of size 'samples' to hold our results */
+static uint64_t *rtt_sample;		/* ptr to current sample in rtt_client_sample */
 
 short protocol = ETH_P_IPBENCH;
 static char ifname[IFNAMSIZ];
@@ -106,19 +102,25 @@ packet_list_del(uint64_t packet_id)
 	if (offset >= packet_list_length)
 		return 0;
 
-	if (packet_list_head >= offset) {
+	if (packet_list_head >= offset)
+	{
 		index = packet_list_head - offset;
-	} else {
+	}
+	else
+	{
 		index = packet_list_length - (offset - packet_list_head);
 	}
 
 	assert(index < packet_list_length);
 
-	if (packet_list[index].packet_id == packet_id) {
+	if (packet_list[index].packet_id == packet_id)
+	{
 		r = packet_list[index].send_time;
 		packet_list[index].packet_id = 0;
 		packet_list[index].send_time = 0;
-	} else {
+	}
+	else
+	{
 		r = 0;
 	}
 
@@ -132,10 +134,12 @@ static int compare_rtt(const void *x, const void *y)
 	rtt_x = x;
 	rtt_y = y;
 
-	if (*rtt_x < *rtt_y) {
+	if (*rtt_x < *rtt_y)
+	{
 		return -1;
-	} 
-	if (*rtt_x > *rtt_y) {
+	}
+	if (*rtt_x > *rtt_y)
+	{
 		return 1;
 	}
 
@@ -148,24 +152,25 @@ static int compare_rtt(const void *x, const void *y)
  */
 static void sort_rtt(int nsamples)
 {
-	qsort(rtt_sample, (nsamples*samples), sizeof(uint64_t), compare_rtt);
+	qsort(rtt_sample, (nsamples * samples), sizeof(uint64_t), compare_rtt);
 }
 
 static uint64_t med_rtt(int nsamples)
 {
 	sort_rtt(nsamples);
-	return rtt_sample[(nsamples*samples) / 2];
+	return rtt_sample[(nsamples * samples) / 2];
 }
 
 static uint64_t avg_rtt(int nsamples)
 {
 	uint64_t total = 0;
 	int i;
-	for (i = 0; i < (nsamples*samples); i++) {
+	for (i = 0; i < (nsamples * samples); i++)
+	{
 		total += rtt_sample[i];
 	}
 
-	return (total / (nsamples*samples));
+	return (total / (nsamples * samples));
 }
 
 static uint64_t dev_rtt(int nsamples)
@@ -177,12 +182,13 @@ static uint64_t dev_rtt(int nsamples)
 
 	sum = 0;
 
-	for (i = 0; i < (nsamples*samples); i++) {
+	for (i = 0; i < (nsamples * samples); i++)
+	{
 		tmp = avg - rtt_sample[i];
 		sum += tmp * tmp;
 	}
 
-	return (sum / (nsamples*samples));	/* warning, we need the sqrt of this! */
+	return (sum / (nsamples * samples)); /* warning, we need the sqrt of this! */
 }
 
 static uint64_t min_rtt(int nsamples)
@@ -192,8 +198,10 @@ static uint64_t min_rtt(int nsamples)
 
 	min = rtt_sample[0];
 
-	for (i = 1; i < (nsamples*samples); i++) {
-		if (rtt_sample[i] < min) {
+	for (i = 1; i < (nsamples * samples); i++)
+	{
+		if (rtt_sample[i] < min)
+		{
 			min = rtt_sample[i];
 		}
 	}
@@ -208,8 +216,10 @@ static uint64_t max_rtt(int nsamples)
 
 	max = rtt_sample[0];
 
-	for (i = 1; i < (nsamples*samples); i++) {
-		if (rtt_sample[i] > max) {
+	for (i = 1; i < (nsamples * samples); i++)
+	{
+		if (rtt_sample[i] > max)
+		{
 			max = rtt_sample[i];
 		}
 	}
@@ -217,33 +227,32 @@ static uint64_t max_rtt(int nsamples)
 	return max;
 }
 
-
 static int
 measure_latency(int sock, uint64_t bps, uint64_t size,
-                uint64_t warmup, uint64_t cooldown)
+				uint64_t warmup, uint64_t cooldown)
 {
-	uint64_t sid, rid, predicted_sends, sends, recvs, tosend=0, torecv=0;
+	uint64_t sid, rid, predicted_sends, sends, recvs, tosend = 0, torecv = 0;
 	uint64_t sent_packets, received_packets, drops;
 	/* start_time < warmup_time < cooldown_time < end_time */
 	uint64_t start_time, warmup_time, cooldown_time, end_time;
 	uint64_t now, rtt, send_time;
-	uint64_t late_packets=0;         /* Missing packets */
-	uint64_t dropped_packets=0;      /* Dropped packets */
-	char *sbuf=NULL, *rbuf=NULL;
+	uint64_t late_packets = 0;	  /* Missing packets */
+	uint64_t dropped_packets = 0; /* Dropped packets */
+	char *sbuf = NULL, *rbuf = NULL;
 	double send_rate;
 
-	uint64_t send_eagains=0, recv_eagains=0, broken_sends=0, broken_recvs=0;
+	uint64_t send_eagains = 0, recv_eagains = 0, broken_sends = 0, broken_recvs = 0;
 
 	int r, s;
 	/* initialisation */
-	layer->setup_packet(&sbuf,size);
-	layer->setup_packet(&rbuf,size);
+	layer->setup_packet(&sbuf, size);
+	layer->setup_packet(&rbuf, size);
 	assert(sbuf != NULL && rbuf != NULL);
 
 	sid = rid = 0;
 
 	sent_packets = received_packets = 0; /* used for actual benchmark time */
-	sends = recvs = 0; /* used for rate control */
+	sends = recvs = 0;					 /* used for rate control */
 
 	/* work out the send interval we should be using */
 	start_time = time_stamp();
@@ -255,7 +264,7 @@ measure_latency(int sock, uint64_t bps, uint64_t size,
 	dbprintf("Calculating send rate (8.0 * %d * %d * %g)\n", US_PER_S, size, tick_rate);
 
 	dbprintf("About to start sending.  send_rate is %g, start_time is %llu, warmup_time %llu, cooldown %llu\n",
-		 send_rate, start_time, warmup_time, cooldown);
+			 send_rate, start_time, warmup_time, cooldown);
 
 	/* start sending */
 
@@ -263,25 +272,30 @@ measure_latency(int sock, uint64_t bps, uint64_t size,
 	 * period ... sends will be less than recvs.
 	 */
 
-	while((now = time_stamp()) && (end_time == 0 || now < end_time)) {
+	while ((now = time_stamp()) && (end_time == 0 || now < end_time))
+	{
 
 		predicted_sends = (now - start_time) * send_rate;
 
-		if (received_packets >= samples && cooldown_time == 0){
+		if (received_packets >= samples && cooldown_time == 0)
+		{
 			/* start cooldown period */
 			cooldown_time = now;
 			end_time = cooldown_time + cooldown;
 		}
 
-		if (torecv == 0){
+		if (torecv == 0)
+		{
 			torecv = size;
 		}
 
-		do {
+		do
+		{
 			assert(torecv >= 0 && torecv <= size);
-			r = layer->recv_packet(&rbuf[size-torecv], torecv, MSG_WAITALL);
-			if (r < 0) {
-				if (errno != EAGAIN) 
+			r = layer->recv_packet(&rbuf[size - torecv], torecv, MSG_WAITALL);
+			if (r < 0)
+			{
+				if (errno != EAGAIN)
 				{
 					dbprintf("recv error: %s\n", strerror(errno));
 					return -1;
@@ -290,37 +304,48 @@ measure_latency(int sock, uint64_t bps, uint64_t size,
 				break;
 			}
 			torecv -= r;
-			if (torecv != 0) broken_recvs++;
+			if (torecv != 0)
+				broken_recvs++;
 		} while (torecv > 0);
 
-		if (torecv == 0){
+		if (torecv == 0)
+		{
 			layer->read_packet(rbuf, &rid);
 			send_time = packet_list_del(rid);
 
 			/* if we are measuring... */
-			if (now >= warmup_time && cooldown_time == 0){
-				if(send_time > 0){
+			if (now >= warmup_time && cooldown_time == 0)
+			{
+				if (send_time > 0)
+				{
 					rtt = now - send_time;
 					rtt_sample[received_packets] = rtt;
 					received_packets++;
-				} else {
+				}
+				else
+				{
 					late_packets++;
 				}
 			}
 			recvs++;
 		}
 
-		if (predicted_sends > sends) {
-			if (tosend == 0){
+		if (predicted_sends > sends)
+		{
+			if (tosend == 0)
+			{
 				layer->fill_packet(sbuf, sid);
 				/**((uint64_t *) sbuf) = sid;*/
 				tosend = size;
 			}
-			do {
-				s = layer->send_packet(&sbuf[size-tosend], tosend, 0);
-				if (s < 0) {
-					if (errno != EAGAIN){
-						printf("ERRNO IS %d\n",errno);
+			do
+			{
+				s = layer->send_packet(&sbuf[size - tosend], tosend, 0);
+				if (s < 0)
+				{
+					if (errno != EAGAIN)
+					{
+						printf("ERRNO IS %d\n", errno);
 						perror("send");
 						assert(!"unhandled send error");
 					}
@@ -328,20 +353,23 @@ measure_latency(int sock, uint64_t bps, uint64_t size,
 					break;
 				}
 				tosend -= s;
-				if (tosend != 0) broken_sends++;
+				if (tosend != 0)
+					broken_sends++;
 			} while (tosend > 0);
 			/* dbprintf("sent sid %"PRId64"\n", sid); */
 
-			if (tosend == 0){
+			if (tosend == 0)
+			{
 				drops = packet_list_add(sid, now);
 				sid++;
 				/* if we are measuring */
-				if (now >= warmup_time && cooldown_time == 0){
+				if (now >= warmup_time && cooldown_time == 0)
+				{
 					dropped_packets += drops;
 					sent_packets++;
 				}
 				sends++;
-  			}
+			}
 		}
 	}
 
@@ -367,28 +395,27 @@ measure_latency(int sock, uint64_t bps, uint64_t size,
 	result.rtt_std = tick_to_usec(dev_rtt(1));
 
 	dbprintf("\n");
-	dbprintf("transferred %"PRId64" bytes in %"PRId64" microseconds\n",
-		 result.transmitted_bytes, result.microseconds);
-	dbprintf("%"PRId64" recvs %"PRId64" sends (%"PRId64" samples)\n",
-		 received_packets, sent_packets, samples);
-	dbprintf("%"PRId64" late packets.\n", late_packets);
-	dbprintf("%"PRId64" dropped packets.\n", dropped_packets);
-	dbprintf("achieved %"PRId64" bps\n", result.bps);
-	dbprintf("min rtt was %"PRId64" us\n", result.rtt_min);
-	dbprintf("average rtt was %"PRId64" us\n", result.rtt_av);
-	dbprintf("max rtt was %"PRId64" us\n", result.rtt_max);
-	dbprintf("rtt std dev was %"PRId64" us^2\n", result.rtt_std);
-	dbprintf("median rtt was %"PRId64" us\n", result.rtt_med);
-	dbprintf("%"PRId64" sends, %"PRId64" receives\n", result.sends, result.recvs);
+	dbprintf("transferred %" PRId64 " bytes in %" PRId64 " microseconds\n",
+			 result.transmitted_bytes, result.microseconds);
+	dbprintf("%" PRId64 " recvs %" PRId64 " sends (%" PRId64 " samples)\n",
+			 received_packets, sent_packets, samples);
+	dbprintf("%" PRId64 " late packets.\n", late_packets);
+	dbprintf("%" PRId64 " dropped packets.\n", dropped_packets);
+	dbprintf("achieved %" PRId64 " bps\n", result.bps);
+	dbprintf("min rtt was %" PRId64 " us\n", result.rtt_min);
+	dbprintf("average rtt was %" PRId64 " us\n", result.rtt_av);
+	dbprintf("max rtt was %" PRId64 " us\n", result.rtt_max);
+	dbprintf("rtt std dev was %" PRId64 " us^2\n", result.rtt_std);
+	dbprintf("median rtt was %" PRId64 " us\n", result.rtt_med);
+	dbprintf("%" PRId64 " sends, %" PRId64 " receives\n", result.sends, result.recvs);
 
-	dbprintf("EAGAIN - send %"PRId64" recv %"PRId64
-		 " | RETRYS send %"PRId64" recv %"PRId64"\n",
-		 send_eagains, recv_eagains, broken_sends, broken_recvs);
+	dbprintf("EAGAIN - send %" PRId64 " recv %" PRId64
+			 " | RETRYS send %" PRId64 " recv %" PRId64 "\n",
+			 send_eagains, recv_eagains, broken_sends, broken_recvs);
 
 #endif
 	return 0;
 }
-
 
 /* Parse commands from an argument of the form
  * cmd1=val1,cmd2=val2...
@@ -398,67 +425,82 @@ static int parse_arg(char *arg)
 	char *p, cmd[200], *val;
 
 	while (next_token(&arg, cmd, " \t,"))
-	  {
-		  if ((p = strchr(cmd, '='))) {
-			  *p = '\0';
-			  val = p+1;
-		  } else
-			  val = NULL;
+	{
+		if ((p = strchr(cmd, '=')))
+		{
+			*p = '\0';
+			val = p + 1;
+		}
+		else
+			val = NULL;
 
-		  /* test arguments */
-		  dbprintf("Got cmd %s val %s\n", cmd, val);
-		  if (!strcmp(cmd, "bps"))
-			  bps = strtoll(val, (char**)NULL, 10);
-		  else if (!strcmp(cmd, "Mbps"))
-			  bps = strtoll(val, (char**)NULL, 10) * 1000000;
-		  else if (!strcmp(cmd, "samples"))
-			  samples = strtoll(val, (char**)NULL, 10);
-		  else if (!strcmp(cmd, "size"))
-			  size = strtoll(val, (char**)NULL, 10);
-		  else if (!strcmp(cmd, "warmup"))
-			  warmup = strtoll(val, (char**)NULL, 10) * US_PER_S;
-		  else if (!strcmp(cmd, "cooldown"))
-			  cooldown = strtoll(val, (char**)NULL, 10) * US_PER_S;
-		  else if (!strcmp(cmd, "socktype")) {
-			  if (!strcmp(val, "udp"))
-				  socktype = SOCKTYPE_UDP;
-			  else if (!strcmp(val, "raw"))
-				  socktype = SOCKTYPE_RAW;
-		  }
-		  else if (!strcmp(cmd, "iface")) {
-			  bzero(ifname, IFNAMSIZ);
-			  strncpy(ifname, val, IFNAMSIZ - 1);
-		  }
-		  else if (!strcmp(cmd, "drop")) {
-			  drop_threshold = strtoll(val, (char**)NULL, 10);
-		  }
-		  else if (!strcmp(cmd, "sockopts"))
-		  {
-			  strncpy(sockopts, val, 199);
-                          sockopts[199] = 0;
-		  }
-		  else if (!strcmp(cmd, "with_cpu_target"))
-		  {
-			  with_cpu_target = 1;
-		  }
-		  else if (!strcmp(cmd, "dump_dir")) {
-			  struct stat s;
-			  if (stat (val, &s) == -1 || ! S_ISDIR (s.st_mode)) {
-				  dbprintf("Invalid dump directory (%s)!\n", strerror(errno));
-				  return -1;
-			  }
-			  dump_dir = malloc(strlen(val)+1);
-			  strcpy(dump_dir, val);
-		  }
-		  else if (!strcmp(cmd, "dump_prefix")) {
-			  dump_prefix = malloc(strlen(val)+1);
-			  strcpy(dump_prefix, val);
-		  }
-		  else {
-			  dbprintf("Invlid argument %s=%s.\n", cmd, val);
-			  return -1;
-		  }
-	  }
+		/* test arguments */
+		dbprintf("Got cmd %s val %s\n", cmd, val);
+		if (!strcmp(cmd, "bps"))
+			bps = strtoll(val, (char **)NULL, 10);
+
+		else if (!strcmp(cmd, "Mbps"))
+			bps = strtoll(val, (char **)NULL, 10) * 1000000;
+
+		else if (!strcmp(cmd, "samples"))
+			samples = strtoll(val, (char **)NULL, 10);
+
+		else if (!strcmp(cmd, "size"))
+			size = strtoll(val, (char **)NULL, 10);
+
+		else if (!strcmp(cmd, "warmup"))
+			warmup = strtoll(val, (char **)NULL, 10) * US_PER_S;
+
+		else if (!strcmp(cmd, "cooldown"))
+			cooldown = strtoll(val, (char **)NULL, 10) * US_PER_S;
+
+		else if (!strcmp(cmd, "socktype"))
+		{
+			if (!strcmp(val, "udp"))
+				socktype = SOCKTYPE_UDP;
+			else if (!strcmp(val, "raw"))
+				socktype = SOCKTYPE_RAW;
+		}
+		else if (!strcmp(cmd, "iface"))
+		{
+			bzero(ifname, IFNAMSIZ);
+			strncpy(ifname, val, IFNAMSIZ - 1);
+		}
+		else if (!strcmp(cmd, "drop"))
+		{
+			drop_threshold = strtoll(val, (char **)NULL, 10);
+		}
+		else if (!strcmp(cmd, "sockopts"))
+		{
+			strncpy(sockopts, val, 199);
+			sockopts[199] = 0;
+		}
+		else if (!strcmp(cmd, "with_cpu_target"))
+		{
+			with_cpu_target = 1;
+		}
+		else if (!strcmp(cmd, "dump_dir"))
+		{
+			struct stat s;
+			if (stat(val, &s) == -1 || !S_ISDIR(s.st_mode))
+			{
+				dbprintf("Invalid dump directory (%s)!\n", strerror(errno));
+				return -1;
+			}
+			dump_dir = malloc(strlen(val) + 1);
+			strcpy(dump_dir, val);
+		}
+		else if (!strcmp(cmd, "dump_prefix"))
+		{
+			dump_prefix = malloc(strlen(val) + 1);
+			strcpy(dump_prefix, val);
+		}
+		else
+		{
+			dbprintf("Invlid argument %s=%s.\n", cmd, val);
+			return -1;
+		}
+	}
 
 	/* only support ethernet sized frames with RAW */
 	if (socktype == SOCKTYPE_RAW && size > ETH_FRAME_LEN)
@@ -467,7 +509,6 @@ static int parse_arg(char *arg)
 	return 0;
 }
 
-
 int latency_setup(char *hostname, int port, char *arg)
 {
 	dbprintf("Latency setup begin (target %s [port %d]).\n", hostname, port);
@@ -475,64 +516,69 @@ int latency_setup(char *hostname, int port, char *arg)
 		if (parse_arg(arg))
 			return -1;
 
-	/* 
+	/*
 	 * number of packets sent in a second. For testing people want
-	 * to send packets very slowly ... 
+	 * to send packets very slowly ...
 	 */
 	packet_list_length = ((bps / 8) / size);
 	if (packet_list_length < 1)
 		packet_list_length = 1;
+
 	/* mutiplied by the number of packets we can have outstanding */
 	packet_list_length *= drop_threshold;
 
 	packet_list = malloc(packet_list_length * sizeof(struct packet_list_node));
-	if (packet_list == NULL) {
-		dbprintf("Can't malloc %"PRId64" bytes for packet_list.\n", packet_list_length);
+	if (!packet_list)
+	{
+		dbprintf("Can't malloc %" PRId64 " bytes for packet_list.\n", packet_list_length);
 		return -1;
 	}
 	bzero(packet_list, packet_list_length * sizeof(struct packet_list_node));
 
 	/* allocate the sample list */
 	rtt_client_sample = malloc(sizeof(uint64_t) * samples);
-	if (rtt_client_sample == NULL) {
-		dbprintf("Can't malloc %"PRId64" bytes for rtt_client_sample\n", samples * 8);
+
+	if (!rtt_client_sample)
+	{
+		dbprintf("Can't malloc %" PRId64 " bytes for rtt_client_sample\n", samples * 8);
 		return -1;
 	}
-	bzero(rtt_client_sample, sizeof(uint64_t)*samples);
+	bzero(rtt_client_sample, sizeof(uint64_t) * samples);
 
 	/* set the current sample as the first one */
 	rtt_sample = rtt_client_sample;
 
-	dbprintf("testing at %"PRId64"bps, %"PRId64" byte chunks, %"PRId64" samples\n", bps, size, samples);
+	dbprintf("testing at %" PRId64 "bps, %" PRId64 " byte chunks, %" PRId64 " samples\n", bps, size, samples);
 
 	microuptime_calibrate();
 
-	switch(socktype) {
-	case SOCKTYPE_TCP:
-		layer = &tcp_layer;
-		break;
+	switch (socktype)
+	{
+		case SOCKTYPE_TCP:
+			layer = &tcp_layer;
+			break;
 
-	case SOCKTYPE_UDP:
-		layer = &udp_layer;
-		break;
+		case SOCKTYPE_UDP:
+			layer = &udp_layer;
+			break;
 
 #ifdef CONFIG_RAW_LINUX
-	case SOCKTYPE_RAW:
-		layer = &raw_layer;
-		break;
+		case SOCKTYPE_RAW:
+			layer = &raw_layer;
+			break;
 #endif
-	default:
-		dbprintf("Invalid socket type (%d)?\n", socktype);
-		return -1;
+		default:
+			dbprintf("Invalid socket type (%d)?\n", socktype);
+			return -1;
 	}
 
 	layer->s = layer->setup_socket(hostname, port, ifname);
-	assert( layer->s != -1 );
+	assert(layer->s != -1);
 
 	fcntl(layer->s, F_SETFL, O_NONBLOCK);
 
-        if (sockopts[0])
-            set_socket_options(layer->s, sockopts);
+	if (sockopts[0])
+		set_socket_options(layer->s, sockopts);
 
 	dbprintf("Latency setup done.\n");
 
@@ -559,7 +605,7 @@ int latency_stop(struct timeval *stop)
 
 int latency_marshall(char **data, int *size, double running_time)
 {
-        uint64_t i;
+	uint64_t i;
 	struct marshalled_result *tosend;
 
 	dbprintf("Latency marshall arguments.\n");
@@ -571,20 +617,20 @@ int latency_marshall(char **data, int *size, double running_time)
 		return -1;
 	}
 
-	uint64_t *rtt_data = (uint64_t*)&tosend->data;
+	uint64_t *rtt_data = (uint64_t *)&tosend->data;
 
 	memcpy(rtt_data, rtt_sample, samples * sizeof(uint64_t));
 
-	for (i = 0 ; i < samples ; i++ )
+	for (i = 0; i < samples; i++)
 		rtt_data[i] = htonll(tick_to_usec(rtt_data[i]));
 
-	tosend->size    = htonll(result.size);
-	tosend->time    = htonll(result.microseconds);
+	tosend->size = htonll(result.size);
+	tosend->time = htonll(result.microseconds);
 	tosend->samples = htonll(samples);
-	tosend->sends   = htonll(result.sends);
-	tosend->recvs   = htonll(result.recvs);
+	tosend->sends = htonll(result.sends);
+	tosend->recvs = htonll(result.recvs);
 	tosend->throughput_requested = htonll(bps);
-	tosend->throughput_achieved  = htonll(result.bps);
+	tosend->throughput_achieved = htonll(result.bps);
 	tosend->throughput_sent = htonll(result.bps_sent);
 
 	*data = (char *)tosend;
@@ -602,27 +648,27 @@ void latency_marshall_cleanup(char **data)
  * Run in ipbench
  */
 int latency_unmarshall(char *input, int input_len, char **data,
-		       int *data_len)
+					   int *data_len)
 {
 	dbprintf("Latency unmarshall arguments.\n");
 	int i;
 
 	/* convert theresult back to something sensible for us */
 	struct marshalled_result *theresult = (struct marshalled_result *)(input);
-	theresult->time    = ntohll(theresult->time);
+	theresult->time = ntohll(theresult->time);
 	theresult->samples = ntohll(theresult->samples);
-	theresult->size    = ntohll(theresult->size);
-	theresult->sends   = ntohll(theresult->sends);
-	theresult->recvs   = ntohll(theresult->recvs);
+	theresult->size = ntohll(theresult->size);
+	theresult->sends = ntohll(theresult->sends);
+	theresult->recvs = ntohll(theresult->recvs);
 	theresult->throughput_requested = ntohll(theresult->throughput_requested);
-	theresult->throughput_achieved  = ntohll(theresult->throughput_achieved);
+	theresult->throughput_achieved = ntohll(theresult->throughput_achieved);
 	theresult->throughput_sent = ntohll(theresult->throughput_sent);
 
-	dbprintf("Unmarshalling %"PRId64" samples\n", theresult->samples);
+	dbprintf("Unmarshalling %" PRId64 " samples\n", theresult->samples);
 
 	uint64_t *rtt_data = (uint64_t *)&theresult->data;
 
-	for (i=0; i < theresult->samples; i++)
+	for (i = 0; i < theresult->samples; i++)
 		rtt_data[i] = ntohll(rtt_data[i]);
 
 	*data_len = sizeof(struct marshalled_result) + (sizeof(uint64_t) * theresult->samples);
@@ -669,15 +715,15 @@ int latency_output(struct client_data data[], int nelem)
 	{
 		theresult = (struct marshalled_result *)(data[i].data);
 
-		memcpy(&rtt_totals[i*samples], &theresult->data, (sizeof(uint64_t)*samples));
+		memcpy(&rtt_totals[i * samples], &theresult->data, (sizeof(uint64_t) * samples));
 
 		total_requested_throughput += theresult->throughput_requested;
-		total_achieved_throughput  += theresult->throughput_achieved;
+		total_achieved_throughput += theresult->throughput_achieved;
 		total_sent_throughput += theresult->throughput_sent;
 		packet_size = theresult->size;
 #ifdef DEBUG
 		/* when debug turned on show the individual results for each client */
-		rtt_sample = (uint64_t*)&theresult->data;
+		rtt_sample = (uint64_t *)&theresult->data;
 
 		result.transmitted_bytes = theresult->recvs * theresult->size;
 		result.microseconds = theresult->time;
@@ -690,15 +736,15 @@ int latency_output(struct client_data data[], int nelem)
 		result.rtt_std = dev_rtt(1);
 
 		dbprintf("** Client %d\n **", i);
-		dbprintf("transferred %"PRId64" bytes in %"PRId64" microseconds\n",
-			 result.transmitted_bytes, result.microseconds);
-		dbprintf("%"PRId64" sends %"PRId64" recvs\n", theresult->sends, theresult->recvs);
-		dbprintf("achieved %"PRId64" bps\n", result.bps);
-		dbprintf("min rtt was %"PRId64" us\n", result.rtt_min);
-		dbprintf("average rtt was %"PRId64" us\n", result.rtt_av);
-		dbprintf("max rtt was %"PRId64" us\n", result.rtt_max);
-		dbprintf("rtt std dev was %"PRId64" us^2\n", result.rtt_std);
-		dbprintf("median rtt was %"PRId64" us\n", result.rtt_med);
+		dbprintf("transferred %" PRId64 " bytes in %" PRId64 " microseconds\n",
+				 result.transmitted_bytes, result.microseconds);
+		dbprintf("%" PRId64 " sends %" PRId64 " recvs\n", theresult->sends, theresult->recvs);
+		dbprintf("achieved %" PRId64 " bps\n", result.bps);
+		dbprintf("min rtt was %" PRId64 " us\n", result.rtt_min);
+		dbprintf("average rtt was %" PRId64 " us\n", result.rtt_av);
+		dbprintf("max rtt was %" PRId64 " us\n", result.rtt_max);
+		dbprintf("rtt std dev was %" PRId64 " us^2\n", result.rtt_std);
+		dbprintf("median rtt was %" PRId64 " us\n", result.rtt_med);
 		dbprintf("\n");
 #endif
 
@@ -709,12 +755,13 @@ int latency_output(struct client_data data[], int nelem)
 			snprintf(dump_filename, MAXPATHLEN, "%s/%s_%d.dmp", dump_dir, dump_prefix, i);
 			dbprintf("Dumping client data into %s\n", dump_filename);
 			f = fopen(dump_filename, "w");
-			if (fd == -1) {
+			if (fd == -1)
+			{
 				dbprintf("Can't create dump file (%s)\n", strerror(errno));
 				continue;
 			}
-			for (s = 0 ; s < samples ; s++)
-				fprintf(f, "%"PRId64"\n", rtt_totals[s]);
+			for (s = 0; s < samples; s++)
+				fprintf(f, "%" PRId64 "\n", rtt_totals[s]);
 			fclose(f);
 		}
 	}
@@ -740,9 +787,9 @@ int latency_output(struct client_data data[], int nelem)
  	dbprintf("median rtt was %"PRId64" us\n", result.rtt_med);
  	dbprintf("\n");
 #endif
-	printf("%"PRId64",%"PRId64",%"PRId64",%"PRId64",%"PRId64",%"PRId64",%"PRId64",%.2f,%"PRId64,
-	       total_requested_throughput, total_achieved_throughput, total_sent_throughput, packet_size,
-	       result.rtt_min, result.rtt_av, result.rtt_max, sqrt(result.rtt_std), result.rtt_med);
+	printf("%" PRId64 ",%" PRId64 ",%" PRId64 ",%" PRId64 ",%" PRId64 ",%" PRId64 ",%" PRId64 ",%.2f,%" PRId64,
+		   total_requested_throughput, total_achieved_throughput, total_sent_throughput, packet_size,
+		   result.rtt_min, result.rtt_av, result.rtt_max, sqrt(result.rtt_std), result.rtt_med);
 	/* when running with cpu_target test, we want the cpu usage argument as the last one */
 	if (with_cpu_target)
 		printf(",");
@@ -756,7 +803,8 @@ int latency_output(struct client_data data[], int nelem)
 
 int latency_setup_controller(char *arg)
 {
-	if (arg) {
+	if (arg)
+	{
 		dbprintf("Setting up controller (%s)\n", arg);
 		/* a bit of a hack ... */
 		if (parse_arg(arg))
@@ -765,21 +813,20 @@ int latency_setup_controller(char *arg)
 	return 0;
 }
 
-struct ipbench_plugin ipbench_plugin = 
-{
-	.magic = "IPBENCH_PLUGIN",
-	.name = "latency",
-	.id = 0x2,
-	.descr = "Latency Tests",
-	.default_port = 7,
-	.setup = &latency_setup,
-	.setup_controller = &latency_setup_controller,
-	.start = &latency_start,
-	.stop = &latency_stop,
-	.marshall = &latency_marshall,
-	.marshall_cleanup = &latency_marshall_cleanup,
-	.unmarshall = &latency_unmarshall,
-	.unmarshall_cleanup = &latency_unmarshall_cleanup,
-	.output = &latency_output,
+struct ipbench_plugin ipbench_plugin =
+	{
+		.magic = "IPBENCH_PLUGIN",
+		.name = "latency",
+		.id = 0x2,
+		.descr = "Latency Tests",
+		.default_port = 7,
+		.setup = &latency_setup,
+		.setup_controller = &latency_setup_controller,
+		.start = &latency_start,
+		.stop = &latency_stop,
+		.marshall = &latency_marshall,
+		.marshall_cleanup = &latency_marshall_cleanup,
+		.unmarshall = &latency_unmarshall,
+		.unmarshall_cleanup = &latency_unmarshall_cleanup,
+		.output = &latency_output,
 };
-

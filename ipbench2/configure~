@@ -667,7 +667,7 @@ SWIG_PYTHON_LIBS
 SWIG_PYTHON_CPPFLAGS
 SWIG_PYTHON_OPT
 PYTHON_EXTRA_LIBS
-PYTHON_SITE_PKG
+PYTHON_SITE_P1KG
 PYTHON_LDFLAGS
 PYTHON_CPPFLAGS
 pkgpyexecdir
@@ -13194,7 +13194,7 @@ printf "%s\n" "$python_path" >&6; }
 
         #
         python_site=`echo $python_path | sed "s/config/site-packages/"`
-        PYTHON_SITE_PKG=$python_site
+        PYTHON_SITE_P1KG=$python_site
 
         #
         # libraries which must be linked in when embedding

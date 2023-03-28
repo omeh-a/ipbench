@@ -278,6 +278,6 @@ int output(void)
 #elif defined IPBENCH_TEST_TARGET
 	sts = ipbench_plugin->output(&target_data);
 #endif
-	return sts;
+	return sts; 	
 }
 

@@ -1,3 +1,7 @@
+# acinclude.m4
+#       Checks all ipbench dependencies
+#       Updated 2023/03 by Matt Rossouw
+
 AC_DEFUN([AC_PROG_SWIG],[
         AC_PATH_PROG([SWIG],[swig])
         if test -z "$SWIG" ; then
